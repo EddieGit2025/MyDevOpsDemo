@@ -2,9 +2,9 @@ name: .NET WebAPI CI
 
 on:
   push:
-    branches: [ "main" ] # 當推送到 main 分支時觸發
+    branches: [ "master" ] # 當推送到 main 分支時觸發
   pull_request:
-    branches: [ "main" ] # 當有人發 PR 到 main 時觸發
+    branches: [ "master" ] # 當有人發 PR 到 main 時觸發
 
 jobs:
   build:
