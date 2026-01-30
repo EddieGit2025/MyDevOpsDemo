@@ -9,31 +9,35 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    # 1. 下載程式碼
     - uses: actions/checkout@v4
 
-    # [已刪除] Setup .NET 步驟
-    # 因為您的電腦已經有安裝了，不需要讓 Runner 冒著權限不足的風險去重裝
-
-    # 2. 還原與編譯 (直接呼叫電腦裡的 dotnet 指令)
     - name: Build
       run: dotnet build --configuration Release
 
-    # 3. 發布 (打包)
     - name: Publish
       run: dotnet publish --configuration Release --output ./publish_output
 
-    # 4. 部署到 IIS
-    - name: Deploy to IIS Folder
-      run: |
-        # 嘗試停止 AppPool (如果沒這個站台就略過錯誤)
-        Stop-WebAppPool -Name "DefaultAppPool" -ErrorAction SilentlyContinue
-        
-        # 複製檔案 (強制覆寫)
-        Copy-Item -Path ".\publish_output\*" -Destination "C:\inetpub\wwwroot\MyApi" -Recurse -Force
-        
-        # 重新啟動 AppPool
-        Start-WebAppPool -Name "DefaultAppPool" -ErrorAction SilentlyContinue
+    # --- 改良區開始 ---
+    
+    # 1. 先關閉電源
+    - name: Stop AppPool
+      run: Stop-WebAppPool -Name "DefaultAppPool" -ErrorAction SilentlyContinue
+
+    # 2. 【關鍵】讓子彈飛一會兒 (等待釋放鎖定)
+    - name: Wait for AppPool to Stop
+      run: Start-Sleep -Seconds 5
+
+    # 3. 複製檔案
+    - name: Copy Files
+      run: Copy-Item -Path ".\publish_output\*" -Destination "C:\inetpub\wwwroot\MyApi" -Recurse -Force
+
+    # 4. 【關鍵】無論上面發生什麼事，一定要把電源打開！
+    # if: always() 代表就算上面複製失敗，這一步也會執行，避免 503 慘劇
+    - name: Start AppPool
+      if: always()
+      run: Start-WebAppPool -Name "DefaultAppPool" -ErrorAction SilentlyContinue
+      
+    # --- 改良區結束 ---
 
     - name: Verify
       run: echo "Deployment finished!"
