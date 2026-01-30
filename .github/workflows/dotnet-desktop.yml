@@ -1,0 +1,43 @@
+name: .NET WebAPI CI
+
+on:
+  push:
+    branches: [ "main" ] # 當推送到 main 分支時觸發
+  pull_request:
+    branches: [ "main" ] # 當有人發 PR 到 main 時觸發
+
+jobs:
+  build:
+    # 這裡改成用 Linux 環境，速度快且更適合 .NET Core/Web API
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 下載程式碼
+    - uses: actions/checkout@v4
+
+    # 2. 安裝 .NET 環境 (用 .NET 8)
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # 3. 還原 NuGet 套件
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # 4. 編譯程式碼 (Build)
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    # 5. 打包發布 (Publish)
+    # 把程式碼變成可以執行的 DLL 檔案，放在 publish_output 資料夾
+    - name: Publish
+      run: dotnet publish --configuration Release --output ./publish_output
+
+    # 6. 上傳產出物 (Artifact)
+    # 在網頁上下載編譯好的檔案
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-webapi-package
+        path: ./publish_output
