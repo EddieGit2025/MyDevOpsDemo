@@ -2,36 +2,31 @@ name: Deploy to Local IIS
 
 on:
   push:
-    branches: [ "master" ] # 確認您的分支名稱是 master
+    branches: [ "master" ]
 
 jobs:
   build-and-deploy:
-    # 關鍵改變：指定用您自己的電腦跑
     runs-on: self-hosted
 
     steps:
     # 1. 下載程式碼
     - uses: actions/checkout@v4
 
-    # 2. 設定 .NET 環境 (雖然您電腦有裝，但這步是好習慣)
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+    # [已刪除] Setup .NET 步驟
+    # 因為您的電腦已經有安裝了，不需要讓 Runner 冒著權限不足的風險去重裝
 
-    # 3. 還原與編譯
+    # 2. 還原與編譯 (直接呼叫電腦裡的 dotnet 指令)
     - name: Build
       run: dotnet build --configuration Release
 
-    # 4. 發布 (打包成 DLL)
+    # 3. 發布 (打包)
     - name: Publish
       run: dotnet publish --configuration Release --output ./publish_output
 
-    # 5. 部署 (將檔案複製到 IIS 資料夾)
-    # 注意：這裡使用 PowerShell 指令直接複製
+    # 4. 部署到 IIS
     - name: Deploy to IIS Folder
       run: |
-        # 先停止 AppPool 以免檔案被鎖定 (第一次部署可忽略錯誤)
+        # 嘗試停止 AppPool (如果沒這個站台就略過錯誤)
         Stop-WebAppPool -Name "DefaultAppPool" -ErrorAction SilentlyContinue
         
         # 複製檔案 (強制覆寫)
@@ -40,6 +35,5 @@ jobs:
         # 重新啟動 AppPool
         Start-WebAppPool -Name "DefaultAppPool" -ErrorAction SilentlyContinue
 
-    # 6. 驗證
-    - name: Verify Deployment
-      run: echo "Deployment finished! Check C:\inetpub\wwwroot\MyApi"
+    - name: Verify
+      run: echo "Deployment finished!"
